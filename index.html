@@ -1,0 +1,176 @@
+<html>
+<head>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <style>
+        .box {
+            width: 200px;
+            height: 200px;
+            border-style: solid;
+            border-color: red;
+            display: inline-block;
+            position: absolute;
+            transition: top 1s, left 1s;
+        }
+
+        .placeholder {
+            position: absolute;
+            display: inline-block;
+            background-color: gray;
+            z-index: -1;
+        }
+
+        .clicked {
+            position: absolute;
+            transition: none !important;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="box_holder">
+        <div id="box1" class="box" style="border-color: red;"></div>
+        <div id="box2" class="box" style="border-color: black;"></div>
+        <div id="box3" class="box" style="border-color: blue;"></div>
+        <div id="box4" class="box" style="border-color: green;"></div>
+        <div id="box5" class="box" style="border-color: purple;"></div>
+        <div id="box6" class="box" style="border-color: orange;"></div>
+        <div id="box7" class="box" style="border-color: pink;"></div>
+        <div id="box8" class="box" style="border-color: yellow; height: 200px;"></div>
+        <div id="box9" class="box"></div>
+        <div id="box10" class="box"></div>
+        <div id="box11" class="box"></div>
+        <div id="box12" class="box"></div>
+        <div id="box13" class="box"></div>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            var MAX_COLUMNS = 8;
+            var dragging = false;
+            var posX = 0;
+            var posY = 0;
+            var columns = 0;
+            var rows = 0;
+            var currentRowHeight = 0;
+            var offsetX = 0;
+            var offsetY = 0;
+            var placeHolder = null;
+
+            $(".box").each(function() {
+                var width = parseFloat($(this).css("width"));
+                var height = parseFloat($(this).css("height"));
+
+                $(this).attr("collideable", true);
+
+                $(this).css("left", posX);
+                $(this).css("top", posY);
+                columns++;
+                if (columns > MAX_COLUMNS) {
+                    columns = 0;
+                    rows++;
+                    posY += currentRowHeight + 10;
+                    posX = 0;
+                    currentRowHeight = 0;
+                } else {
+                    posX += width + 10;
+                }
+                if (height > currentRowHeight) {
+                    currentRowHeight = height;
+                }
+
+                // and transition event handlers to box objects
+                // these are used to preven collisions with boxes
+                // while they are moving to a new location
+                $(this).bind('transitionend', function(trans_event) {
+                    $(this).attr("moving", false);
+                });
+            });
+
+            $(".box").mousedown(function(this_event) {
+                dragging = true;
+                offsetX = this_event.pageX - parseFloat($(this).css("left"));
+                offsetY = this_event.pageY - parseFloat($(this).css("top"));
+                $(this).addClass("clicked");
+                $("#box_holder").append('<div id="placeholder" class="placeholder"></div>');
+                $("#placeholder").css("top", parseFloat($(this).css("top")));
+                $("#placeholder").css("left", parseFloat($(this).css("left")));
+                $("#placeholder").css("width", parseFloat($(this).css("width")));
+                $("#placeholder").css("height", parseFloat($(this).css("height")));
+            });
+
+            $(window).mouseup(function() {
+                dragging = false;
+                offsetX = 0;
+                offsetY = 0;
+                $(".clicked").each(function() {
+                    $(this).removeClass("clicked");
+
+                    // move box to the placeholder's position
+                    $(this).css("left", $("#placeholder").css("left"));
+                    $(this).css("top", $("#placeholder").css("top"));
+                });
+
+                // then get rid of the placeholder
+                $("#placeholder").remove();
+
+            });
+
+            $(window).mousemove(function(this_event) {
+                $(".clicked").each(function() {
+                    $(this).css("top", this_event.pageY - offsetY);
+                    $(this).css("left", this_event.pageX - offsetX);
+
+                    // collision detection
+                    var thisBox = $(this);
+                    var thisX = parseFloat(thisBox.css("left"));
+                    var thisY = parseFloat(thisBox.css("top"));
+                    var thisW = parseFloat(thisBox.css("width"));
+                    var thisH = parseFloat(thisBox.css("height"));
+                    $('.box').each(function() {
+                        var boxX = parseFloat($(this).css("left"));
+                        var boxY = parseFloat($(this).css("top"));
+                        var boxW = parseFloat($(this).css("width"));
+                        var boxH = parseFloat($(this).css("height"));
+                        var newX = 0;
+                        var newY = 0;
+
+                        if ($(this).attr("moving") == "true") {
+                            return 1;
+                        }
+                        if ($(this)[0] == thisBox[0]) {
+                            return 1;
+                        }
+                        if ((thisX >= boxX && thisX <= boxX + boxW) ||
+                            (thisX + thisW >= boxX && thisX + thisW <= boxX + boxW)) {
+                            
+                            if ((thisY >= boxY && thisY <= boxY + boxH) ||
+                                (thisY + thisH >= boxY && thisY + thisH <= boxY + boxH)) {
+
+                                if ($(this).attr("collideable") == "true") {
+                                    // move the colliding box to the position of the placeholder
+                                    newX = parseFloat($("#placeholder").css("left"));
+                                    newY = parseFloat($("#placeholder").css("top"));
+                                    $(this).css("left", newX);
+                                    $(this).css("top", newY);
+                                    $(this).attr("moving", true);
+                                    // now move the placeholder to the box's old spot
+                                    $("#placeholder").css("left", boxX);
+                                    $("#placeholder").css("top", boxY);
+
+                                    // continue
+                                    $(this).attr("collideable", false);
+                                    return 1;
+                                } else {
+                                    return 1;
+                                }
+                            }
+                        }
+                        $(this).attr("collideable", true);
+                    });
+                });
+            });
+
+        });
+    </script>
+</body>
+</html>
