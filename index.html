@@ -7,8 +7,10 @@
             height: 200px;
             border-style: solid;
             border-color: red;
+            background-color: red;
             display: inline-block;
             position: absolute;
+            z-index: 1;
             transition: top 1s, left 1s;
         }
 
@@ -21,31 +23,35 @@
 
         .clicked {
             position: absolute;
+            z-index: 10;
             transition: none !important;
         }
     </style>
 </head>
 <body>
 
-    <div id="box_holder">
-        <div id="box1" class="box" style="border-color: red;"></div>
-        <div id="box2" class="box" style="border-color: black;"></div>
-        <div id="box3" class="box" style="border-color: blue;"></div>
-        <div id="box4" class="box" style="border-color: green;"></div>
-        <div id="box5" class="box" style="border-color: purple;"></div>
-        <div id="box6" class="box" style="border-color: orange;"></div>
-        <div id="box7" class="box" style="border-color: pink;"></div>
-        <div id="box8" class="box" style="border-color: yellow; height: 300px;"></div>
-        <div id="box9" class="box"></div>
-        <div id="box10" class="box"></div>
-        <div id="box11" class="box"></div>
-        <div id="box12" class="box"></div>
-        <div id="box13" class="box"></div>
+    <div id="outer_container" style="width: 500px;">
+        <div id="box_holder" style="width: 60%;">
+            <div id="box1" class="box" style="border-color: red; background-color: red;"></div>
+            <div id="box2" class="box" style="border-color: black; background-color: black;"></div>
+            <div id="box3" class="box" style="border-color: blue; background-color: blue;"></div>
+            <div id="box4" class="box" style="border-color: green; background-color: green;"></div>
+            <div id="box5" class="box" style="border-color: purple; background-color: purple;"></div>
+            <div id="box6" class="box" style="border-color: orange; background-color: orange;"></div>
+            <div id="box7" class="box" style="border-color: pink; background-color: pink;"></div>
+            <div id="box8" class="box" style="border-color: yellow; background-color: yellow; height: 300px;"></div>
+            <div id="box9" class="box"></div>
+            <div id="box10" class="box"></div>
+            <div id="box11" class="box"></div>
+            <div id="box12" class="box"></div>
+            <div id="box13" class="box"></div>
+        </div>
     </div>
 
     <script>
         $(document).ready(function() {
             var MAX_COLUMNS = 8;
+            var COLUMN_MODIFIER = 1;
             var dragging = false;
             var posX = 0;
             var posY = 0;
@@ -55,36 +61,73 @@
             var offsetX = 0;
             var offsetY = 0;
             var placeHolder = null;
+            var buffer = 10;
 
-            $(".box").each(function() {
-                var width = parseFloat($(this).css("width"));
-                var height = parseFloat($(this).css("height"));
+            var win_height = $(window).height();
+            var win_width = $(window).width();
 
-                $(this).attr("collideable", true);
+            // do initial placement of boxes
+            sizeColumns();
+            placement();
 
-                $(this).css("left", posX);
-                $(this).css("top", posY);
-                columns++;
-                if (columns > MAX_COLUMNS) {
-                    columns = 0;
-                    rows++;
-                    posY += currentRowHeight + 10;
-                    posX = 0;
-                    currentRowHeight = 0;
-                } else {
-                    posX += width + 10;
-                }
-                if (height > currentRowHeight) {
-                    currentRowHeight = height;
-                }
-
-                // and transition event handlers to box objects
-                // these are used to preven collisions with boxes
-                // while they are moving to a new location
-                $(this).bind('transitionend', function(trans_event) {
-                    $(this).attr("moving", false);
-                });
+            $(window).resize(function() {
+                posX = 0;
+                posY = 0;
+                columns = 0;
+                rows = 0;
+                sizeColumns();
+                placement();
             });
+
+            function sizeColumns() {
+
+                win_height = $(this).height();
+                win_width = $(this).width();
+
+                if (win_width >= 1200) {
+                    COLUMN_MODIFIER = 1;
+                } else if (win_width >= 980) {
+                    COLUMN_MODIFIER = 1.5;
+                } else if (win_width >= 768) {
+                    COLUMN_MODIFIER = 2;
+                } else if (win_width > 480) {
+                    COLUMN_MODIFIER = 2.5;
+                } else {
+                    COLUMN_MODIFIER = 3;
+                }
+            }
+
+            function placement() {
+                $(".box").each(function() {
+                    var width = parseFloat($(this).css("width"));
+                    var height = parseFloat($(this).css("height"));
+
+                    $(this).attr("collideable", true);
+
+                    $(this).css("left", posX);
+                    $(this).css("top", posY);
+                    columns += 1 * COLUMN_MODIFIER;
+                    if (columns > MAX_COLUMNS) {
+                        columns = 0;
+                        rows++;
+                        posY += currentRowHeight + 10;
+                        posX = 0;
+                        currentRowHeight = 0;
+                    } else {
+                        posX += width + 10;
+                    }
+                    if (height > currentRowHeight) {
+                        currentRowHeight = height;
+                    }
+
+                    // and transition event handlers to box objects
+                    // these are used to preven collisions with boxes
+                    // while they are moving to a new location
+                    $(this).bind('transitionend', function(trans_event) {
+                        $(this).attr("moving", false);
+                    });
+                });
+            }
 
             $(".box").mousedown(function(this_event) {
                 dragging = true;
@@ -143,8 +186,9 @@
                         if ((thisX >= boxX && thisX <= boxX + boxW) ||
                             (thisX + thisW >= boxX && thisX + thisW <= boxX + boxW)) {
                             
-                            if ((thisY >= boxY && thisY <= boxY + boxH) ||
-                                (thisY + thisH >= boxY && thisY + thisH <= boxY + boxH)) {
+                            if (((thisY >= boxY && thisY <= boxY + boxH) ||
+                                (thisY + thisH >= boxY && thisY + thisH <= boxY + boxH))||
+                                (thisY <= boxY && thisY + thisY >= boxY + boxH)) {
 
                                 if ($(this).attr("collideable") == "true") {
                                     // move the colliding box to the position of the placeholder
@@ -169,6 +213,10 @@
                     });
                 });
             });
+
+            function rearrange() {
+
+            }
 
         });
     </script>
